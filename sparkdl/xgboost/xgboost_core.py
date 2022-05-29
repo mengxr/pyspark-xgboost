@@ -594,8 +594,9 @@ class XgboostRegressorModel(_XgboostModel):
             X, _, _, _ = prepare_predict_data(iterator, False)
             # Note: In every spark job task, pandas UDF will run in separate python process
             # so it is safe here to call the thread-unsafe model.predict method
-            preds = xgb_sklearn_model.predict(X, **predict_params)
-            yield pd.Series(preds)
+            if len(X) > 0:
+                preds = xgb_sklearn_model.predict(X, **predict_params)
+                yield pd.Series(preds)
 
         @pandas_udf('double')
         def predict_udf_base_margin(iterator: Iterator[Tuple[pd.Series, pd.Series]]) \
@@ -604,10 +605,11 @@ class XgboostRegressorModel(_XgboostModel):
             X, _, _, b_m = prepare_predict_data(iterator, True)
             # Note: In every spark job task, pandas UDF will run in separate python process
             # so it is safe here to call the thread-unsafe model.predict method
-            preds = xgb_sklearn_model.predict(X,
-                                              base_margin=b_m,
-                                              **predict_params)
-            yield pd.Series(preds)
+            if len(X) > 0:
+                preds = xgb_sklearn_model.predict(X,
+                                                  base_margin=b_m,
+                                                  **predict_params)
+                yield pd.Series(preds)
 
         features_col = col(self.getOrDefault(self.featuresCol))
         features_col = struct(vector_to_array(features_col, dtype="float32").alias("values"))
